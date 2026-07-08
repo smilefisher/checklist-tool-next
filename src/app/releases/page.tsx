@@ -395,7 +395,7 @@ export default function ReleasesPage() {
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center gap-3">
-                    <Label className="text-sm text-slate-600">选择 Checklist</Label>
+                    <Label className="text-sm text-slate-600">选择检查项</Label>
                     <span className="text-xs text-slate-400">{form.checklistItemIds.length} 项已选中</span>
                   </div>
                   <div className="flex items-center gap-3">
@@ -451,7 +451,7 @@ export default function ReleasesPage() {
                     </label>
                   ))}
                   {createFilteredItems.length === 0 && (
-                    <p className="text-center py-12 text-slate-400 text-sm">没有匹配的 Checklist 项</p>
+                    <p className="text-center py-12 text-slate-400 text-sm">没有匹配的检查项</p>
                   )}
                 </div>
               </div>

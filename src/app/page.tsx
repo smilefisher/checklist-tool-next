@@ -342,7 +342,7 @@ export default function ChecklistPoolPage() {
           open={confirmOpen}
           onOpenChange={setConfirmOpen}
           title="确认删除"
-          description="确定要删除这个 Checklist 吗？删除后可在数据库中恢复。"
+          description="确定要删除这个检查项吗？删除后可在数据库中恢复。"
           onConfirm={deleteItem}
           confirmText="删除"
         />

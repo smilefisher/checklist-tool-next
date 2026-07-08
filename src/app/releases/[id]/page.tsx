@@ -292,7 +292,7 @@ export default function ReleaseDetailPage() {
           </div>
 
           {items.length === 0 ? (
-            <div className="text-center py-12 text-gray-400"><p>暂无 Checklist 项</p></div>
+            <div className="text-center py-12 text-gray-400"><p>暂无检查项</p></div>
           ) : (
             <div className="space-y-4">
               {items.map((item, index) => (
@@ -369,10 +369,10 @@ export default function ReleaseDetailPage() {
           )}
         </div>
 
-        {/* Edit checklist item dialog */}
+        {/* Edit item dialog */}
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent className="max-w-[550px] max-h-[85vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>编辑 Checklist</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>编辑检查项</DialogTitle></DialogHeader>
             <div className="p-4">
               <div className="mb-3">
                 <Label className="text-sm mb-1.5 block">标题</Label>

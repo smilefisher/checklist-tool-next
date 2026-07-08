@@ -61,7 +61,7 @@ export default function NewReleasePage() {
   }
 
   const createRelease = async () => {
-    if (!canSubmit) { toast.warning('请填写完整信息并选择至少一个 Checklist 项'); return }
+    if (!canSubmit) { toast.warning('请填写完整信息并选择至少一个检查项'); return }
     try {
       const res = await fetch('/api/releases', {
         method: 'POST',
@@ -106,7 +106,7 @@ export default function NewReleasePage() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <h2 className="text-base font-semibold text-slate-700">选择 Checklist 项</h2>
+              <h2 className="text-base font-semibold text-slate-700">              选择检查项</h2>
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
                 {selectedItems.length} 项已选中
               </span>
