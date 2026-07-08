@@ -81,16 +81,16 @@ export default function NewReleasePage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-slate-800">创建发布单</h1>
-          <p className="text-slate-500 text-sm mt-1">填写发布信息并选择需要执行的 Checklist 项</p>
+          <h1 className="text-2xl font-bold text-slate-800">新建任务</h1>
+            <p className="text-slate-500 text-sm mt-1">填写任务信息并选择需要执行的检查项</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 mb-6">
           <h2 className="text-base font-semibold text-slate-700 mb-6">基本信息</h2>
           <div className="grid grid-cols-3 gap-6">
             <div>
-              <Label className="text-sm text-slate-600 mb-2 block">发布名称 <span className="text-red-400">*</span></Label>
-              <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="输入发布名称" className="h-10" />
+              <Label className="text-sm text-slate-600 mb-2 block">任务名称 <span className="text-red-400">*</span></Label>
+              <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="输入任务名称" className="h-10" />
             </div>
             <div>
               <Label className="text-sm text-slate-600 mb-2 block">版本号</Label>
@@ -119,7 +119,7 @@ export default function NewReleasePage() {
                     "px-4 py-2 text-sm font-medium transition-colors",
                     !showAll ? "bg-blue-600 text-white shadow" : "text-slate-600 hover:bg-slate-50"
                   )}
-                >未被引用</button>
+                >空闲</button>
                 <button
                   onClick={() => setShowAll(true)}
                   className={cn(
@@ -141,8 +141,8 @@ export default function NewReleasePage() {
 
           {allItems.length === 0 ? (
             <div className="text-center py-16 text-slate-400">
-              <p className="text-lg">没有可用的 Checklist 项</p>
-              <p className="text-sm mt-2">请先在 Checklist 池中添加项，或切换到"全部"查看所有项</p>
+              <p className="text-lg">没有可用的检查项</p>
+              <p className="text-sm mt-2">请先在检查清单中添加项，或切换到"全部"查看所有项</p>
             </div>
           ) : (
             <div className="border border-slate-200 rounded-lg overflow-hidden">
@@ -217,7 +217,7 @@ export default function NewReleasePage() {
             <div className="flex items-center gap-2 text-sm text-slate-400">
               {selectedItems.length > 0 && <span>已选择 {selectedItems.length} 项</span>}
               <Button onClick={createRelease} disabled={!canSubmit} className="px-8" size="lg">
-                创建发布单
+                创建任务
               </Button>
             </div>
           </div>

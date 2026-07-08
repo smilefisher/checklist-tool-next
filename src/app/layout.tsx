@@ -3,8 +3,8 @@ import './globals.css'
 import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
-  title: '发布流程 Checklist 管理系统',
-  description: '发布流程 Checklist 管理系统',
+  title: '事项核查台',
+  description: '事项核查台',
   icons: { icon: '/favicon.svg' },
 }
 

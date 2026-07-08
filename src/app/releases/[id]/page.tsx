@@ -22,7 +22,7 @@ import { ReleaseStatus, ChecklistType, Priority } from '@/types'
 import type { ReleaseChecklistItem } from '@/types'
 import { cn } from '@/lib/utils'
 
-const statusLabels: Record<string, string> = { draft: '待发布', in_progress: '进行中', completed: '已发布' }
+const statusLabels: Record<string, string> = { draft: '未开始', in_progress: '执行中', completed: '已完成' }
 const statusVariants: Record<string, 'secondary' | 'success' | 'warning'> = {
   draft: 'secondary', in_progress: 'warning', completed: 'success',
 }
@@ -161,7 +161,7 @@ export default function ReleaseDetailPage() {
   }
 
   const saveInfo = async () => {
-    if (!infoForm.name) { toast.warning('请输入发布名称'); return }
+    if (!infoForm.name) { toast.warning('请输入任务名称'); return }
     try {
       await fetch(`/api/releases/${releaseId}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -258,7 +258,7 @@ export default function ReleaseDetailPage() {
             </div>
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => router.push('/releases')}>返回</Button>
-              <Button onClick={showEditDialog}>编辑清单</Button>
+              <Button onClick={showEditDialog}>配置检查项</Button>
             </div>
           </div>
 
@@ -267,11 +267,11 @@ export default function ReleaseDetailPage() {
               <span className="text-gray-600">完成进度: <strong>{checkedCount}/{totalCount}</strong></span>
               <div className="flex gap-2">
                 {release.status === ReleaseStatus.DRAFT && (
-                  <Button className="bg-amber-500 hover:bg-amber-600" onClick={() => updateStatus(ReleaseStatus.IN_PROGRESS)}>开始执行</Button>
+                  <Button className="bg-amber-500 hover:bg-amber-600" onClick={() => updateStatus(ReleaseStatus.IN_PROGRESS)}>开始检查</Button>
                 )}
                 {release.status === ReleaseStatus.IN_PROGRESS && (
                   <Button className="bg-emerald-500 hover:bg-emerald-600" onClick={() => updateStatus(ReleaseStatus.COMPLETED)} disabled={!allItemsChecked}>
-                    标记完成
+                    完成检查
                   </Button>
                 )}
               </div>
@@ -285,9 +285,9 @@ export default function ReleaseDetailPage() {
 
         <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">执行清单</h2>
+            <h2 className="text-lg font-semibold text-gray-900">检查步骤</h2>
             {items.length > 0 && (
-              <Button variant="outline" size="sm" onClick={toggleAll}>一键反选</Button>
+              <Button variant="outline" size="sm" onClick={toggleAll}>全部反选</Button>
             )}
           </div>
 
@@ -385,11 +385,11 @@ export default function ReleaseDetailPage() {
 
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <Label className="text-sm">变更项</Label>
-                  <Button variant="outline" size="sm" onClick={() => setEditForm({ ...editForm, changes: [...editForm.changes, { id: '', checklistItemId: '', type: 'config', description: '', code: '', codeLanguage: '', sortOrder: editForm.changes.length, createdAt: '' }] })}>+ 添加变更</Button>
+                  <Label className="text-sm">操作步骤</Label>
+                  <Button variant="outline" size="sm" onClick={() => setEditForm({ ...editForm, changes: [...editForm.changes, { id: '', checklistItemId: '', type: 'config', description: '', code: '', codeLanguage: '', sortOrder: editForm.changes.length, createdAt: '' }] })}>+ 添加步骤</Button>
                 </div>
                 {editForm.changes.length === 0 ? (
-                  <p className="text-sm text-slate-400 py-3 text-center border border-dashed border-slate-200 rounded-lg">暂无变更项</p>
+                  <p className="text-sm text-slate-400 py-3 text-center border border-dashed border-slate-200 rounded-lg">暂无步骤</p>
                 ) : (
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
                     {editForm.changes.map((c, ci) => (
@@ -412,7 +412,7 @@ export default function ReleaseDetailPage() {
                             <CustomSelectItem value="javascript">JavaScript</CustomSelectItem>
                             <CustomSelectItem value="text">其他</CustomSelectItem>
                           </CustomSelect>
-                          <Input value={c.description} onChange={e => { const nc = [...editForm.changes]; nc[ci] = { ...nc[ci], description: e.target.value }; setEditForm({ ...editForm, changes: nc }) }} placeholder="变更描述（可选）" className="flex-1" />
+                          <Input value={c.description} onChange={e => { const nc = [...editForm.changes]; nc[ci] = { ...nc[ci], description: e.target.value }; setEditForm({ ...editForm, changes: nc }) }} placeholder="步骤描述（可选）" className="flex-1" />
                           <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600 h-9 px-1" onClick={() => setEditForm({ ...editForm, changes: editForm.changes.filter((_, i) => i !== ci) })}>删除</Button>
                         </div>
                         {c.codeLanguage && (
@@ -441,13 +441,13 @@ export default function ReleaseDetailPage() {
         {/* Edit list dialog */}
         <Dialog open={editListDialogOpen} onOpenChange={setEditListDialogOpen}>
           <DialogContent className="max-w-[800px]">
-            <DialogHeader><DialogTitle>编辑清单</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>配置检查项</DialogTitle></DialogHeader>
             <div className="flex gap-4 mb-4">
               <CustomSelect value={filterStatus} onValueChange={setFilterStatus} placeholder="按状态筛选" className="w-[130px]">
                 <CustomSelectItem value="">全部状态</CustomSelectItem>
-                <CustomSelectItem value="pool">池中可用</CustomSelectItem>
-                <CustomSelectItem value="referenced">仅被引用</CustomSelectItem>
-                <CustomSelectItem value="disabled">已禁用</CustomSelectItem>
+                <CustomSelectItem value="pool">可用</CustomSelectItem>
+                <CustomSelectItem value="referenced">已引用</CustomSelectItem>
+                <CustomSelectItem value="disabled">已停用</CustomSelectItem>
               </CustomSelect>
               <CustomSelect value={filterType} onValueChange={setFilterType} placeholder="按类型筛选" className="w-[130px]">
                 <CustomSelectItem value="">全部类型</CustomSelectItem>
@@ -511,11 +511,11 @@ export default function ReleaseDetailPage() {
         {/* Edit info dialog */}
         <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
           <DialogContent className="max-w-[500px]">
-            <DialogHeader><DialogTitle>编辑发布信息</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>编辑任务信息</DialogTitle></DialogHeader>
             <div className="px-4 pt-1 pb-0">
               <div className="mb-3">
-                <Label className="text-sm mb-1.5 block">发布名称</Label>
-                <Input value={infoForm.name} onChange={e => setInfoForm({ ...infoForm, name: e.target.value })} placeholder="输入发布名称" />
+                <Label className="text-sm mb-1.5 block">任务名称</Label>
+                <Input value={infoForm.name} onChange={e => setInfoForm({ ...infoForm, name: e.target.value })} placeholder="输入任务名称" />
               </div>
               <div className="mb-3">
                 <Label className="text-sm mb-1.5 block">版本号</Label>

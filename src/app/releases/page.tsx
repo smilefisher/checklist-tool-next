@@ -20,7 +20,7 @@ import ConfirmDialog from '@/components/ConfirmDialog'
 import { ReleaseStatus, ChecklistType, Priority } from '@/types'
 import { cn } from '@/lib/utils'
 
-const statusLabels: Record<string, string> = { draft: '待发布', in_progress: '进行中', completed: '已发布' }
+const statusLabels: Record<string, string> = { draft: '未开始', in_progress: '执行中', completed: '已完成' }
 const statusVariants: Record<string, 'default' | 'success' | 'warning' | 'secondary'> = {
   draft: 'secondary', in_progress: 'warning', completed: 'success',
 }
@@ -121,7 +121,7 @@ export default function ReleasesPage() {
   }
 
   const createRelease = async () => {
-    if (!form.name) { toast.warning('请输入发布名称'); return }
+    if (!form.name) { toast.warning('请输入任务名称'); return }
     try {
       const res = await fetch('/api/releases', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form)
@@ -154,7 +154,7 @@ export default function ReleasesPage() {
   }
 
   const saveEdit = async () => {
-    if (!editForm.name) { toast.warning('请输入发布名称'); return }
+    if (!editForm.name) { toast.warning('请输入任务名称'); return }
     try {
       await fetch(`/api/releases/${editForm.id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -194,11 +194,11 @@ export default function ReleasesPage() {
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="flex justify-between items-end mb-6">
           <div className="flex gap-8 border-b border-gray-200 flex-1">
-            <span className="pb-3 text-xl font-bold cursor-pointer text-gray-300 hover:text-gray-500" onClick={() => router.push('/')}>Checklist 池</span>
-            <span className="pb-3 text-xl font-bold cursor-pointer border-b-2 border-blue-500 text-blue-600">发布单列表</span>
+            <span className="pb-3 text-xl font-bold cursor-pointer text-gray-300 hover:text-gray-500" onClick={() => router.push('/')}>检查清单</span>
+            <span className="pb-3 text-xl font-bold cursor-pointer border-b-2 border-blue-500 text-blue-600">检查任务</span>
           </div>
           <div className="flex gap-3 ml-6 pb-1">
-            <Button onClick={showCreateDialog}>新建发布单</Button>
+            <Button onClick={showCreateDialog}>新建任务</Button>
           </div>
         </div>
 
@@ -207,9 +207,9 @@ export default function ReleasesPage() {
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">状态:</span>
               <CustomSelect value={releaseStatusFilter} onValueChange={setReleaseStatusFilter} className="w-[120px]">
-                <CustomSelectItem value="draft">待发布</CustomSelectItem>
-                <CustomSelectItem value="in_progress">进行中</CustomSelectItem>
-                <CustomSelectItem value="completed">已发布</CustomSelectItem>
+                    <CustomSelectItem value="draft">未开始</CustomSelectItem>
+                    <CustomSelectItem value="in_progress">执行中</CustomSelectItem>
+                    <CustomSelectItem value="completed">已完成</CustomSelectItem>
               </CustomSelect>
             </div>
             <div className="flex-1" />
@@ -222,7 +222,7 @@ export default function ReleasesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[80px]">ID</TableHead>
-                <TableHead>发布名称</TableHead>
+                <TableHead>任务名称</TableHead>
                 <TableHead className="w-[120px]">版本</TableHead>
                 <TableHead className="w-[100px]">状态</TableHead>
                 <TableHead className="w-[150px]">创建时间</TableHead>
@@ -257,7 +257,7 @@ export default function ReleasesPage() {
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-16 text-gray-400">
                     <p>暂无发布单</p>
-                    <p className="text-sm mt-1">点击&ldquo;新建发布单&rdquo;开始</p>
+                    <p className="text-sm mt-1">点击&ldquo;新建任务&rdquo;开始</p>
                   </TableCell>
                 </TableRow>
               )}
@@ -268,12 +268,12 @@ export default function ReleasesPage() {
         {/* Edit dialog */}
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent className="max-w-[700px]">
-            <DialogHeader><DialogTitle>编辑发布信息</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>编辑任务信息</DialogTitle></DialogHeader>
             <div className="px-4 pt-1 pb-0">
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <Label className="text-sm mb-1.5 block">发布名称</Label>
-                  <Input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} placeholder="输入发布名称" />
+                  <Label className="text-sm mb-1.5 block">任务名称</Label>
+                  <Input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} placeholder="输入任务名称" />
                 </div>
                 <div style={{ width: 150 }}>
                   <Label className="text-sm mb-1.5 block">版本号</Label>
@@ -282,9 +282,9 @@ export default function ReleasesPage() {
                 <div style={{ width: 130 }}>
                   <Label className="text-sm mb-1.5 block">状态</Label>
                   <CustomSelect value={editForm.status} onValueChange={v => setEditForm({ ...editForm, status: v })}>
-                    <CustomSelectItem value="draft">待发布</CustomSelectItem>
-                    <CustomSelectItem value="in_progress">进行中</CustomSelectItem>
-                    <CustomSelectItem value="completed">已发布</CustomSelectItem>
+                <CustomSelectItem value="draft">未开始</CustomSelectItem>
+                <CustomSelectItem value="in_progress">执行中</CustomSelectItem>
+                <CustomSelectItem value="completed">已完成</CustomSelectItem>
                   </CustomSelect>
                 </div>
               </div>
@@ -294,7 +294,7 @@ export default function ReleasesPage() {
               </div>
             </div>
             <DialogFooter className="flex justify-between">
-              <Button variant="outline" onClick={showEditListDialog}>编辑清单</Button>
+              <Button variant="outline" onClick={showEditListDialog}>配置检查项</Button>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setEditDialogOpen(false)}>取消</Button>
                 <Button onClick={saveEdit}>保存</Button>
@@ -306,13 +306,13 @@ export default function ReleasesPage() {
         {/* Edit list dialog */}
         <Dialog open={editListDialogOpen} onOpenChange={setEditListDialogOpen}>
           <DialogContent className="max-w-[800px]">
-            <DialogHeader><DialogTitle>编辑清单</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>配置检查项</DialogTitle></DialogHeader>
             <div className="flex gap-4 mb-4">
               <CustomSelect value={poolFilterStatus} onValueChange={setPoolFilterStatus} placeholder="按状态筛选" className="w-[130px]">
                 <CustomSelectItem value="">全部状态</CustomSelectItem>
-                <CustomSelectItem value="pool">池中可用</CustomSelectItem>
-                <CustomSelectItem value="referenced">仅被引用</CustomSelectItem>
-                <CustomSelectItem value="disabled">已禁用</CustomSelectItem>
+                <CustomSelectItem value="pool">可用</CustomSelectItem>
+                <CustomSelectItem value="referenced">已引用</CustomSelectItem>
+                <CustomSelectItem value="disabled">已停用</CustomSelectItem>
               </CustomSelect>
               <CustomSelect value={poolFilterType} onValueChange={setPoolFilterType} placeholder="按类型筛选" className="w-[130px]">
                 <CustomSelectItem value="">全部类型</CustomSelectItem>
@@ -376,12 +376,12 @@ export default function ReleasesPage() {
         {/* Create dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-[800px]">
-            <DialogHeader><DialogTitle>新建发布单</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>新建任务</DialogTitle></DialogHeader>
             <div className="px-1">
               <div className="flex gap-4 mb-6">
                 <div className="flex-1">
-                  <Label className="text-sm text-slate-600 mb-2 block">发布名称 <span className="text-red-400">*</span></Label>
-                  <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="输入发布名称" />
+                  <Label className="text-sm text-slate-600 mb-2 block">任务名称 <span className="text-red-400">*</span></Label>
+                  <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="输入任务名称" />
                 </div>
                 <div style={{ width: 160 }}>
                   <Label className="text-sm text-slate-600 mb-2 block">版本号</Label>
@@ -406,7 +406,7 @@ export default function ReleasesPage() {
                           "px-3 py-1.5 text-sm font-medium transition-colors",
                           !createShowAll ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-50"
                         )}
-                      >未被引用</button>
+                      >空闲</button>
                       <button
                         onClick={() => setCreateShowAll(true)}
                         className={cn(
@@ -467,7 +467,7 @@ export default function ReleasesPage() {
           open={confirmOpen}
           onOpenChange={setConfirmOpen}
           title="确认删除"
-          description="确定要删除这个发布单吗？删除后可在数据库中恢复。"
+          description="确定要删除这个任务吗？删除后可在数据库中恢复。"
           onConfirm={deleteRelease}
           confirmText="删除"
         />

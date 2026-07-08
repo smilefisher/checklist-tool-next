@@ -141,11 +141,11 @@ export default function ChecklistPoolPage() {
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="flex justify-between items-end mb-6">
           <div className="flex gap-8 border-b border-gray-200 flex-1">
-            <span className="pb-3 text-xl font-bold cursor-pointer border-b-2 border-blue-500 text-blue-600">Checklist 池</span>
-            <span className="pb-3 text-xl font-bold cursor-pointer text-gray-300 hover:text-gray-500" onClick={() => router.push('/releases')}>发布单列表</span>
+            <span className="pb-3 text-xl font-bold cursor-pointer border-b-2 border-blue-500 text-blue-600">检查清单</span>
+            <span className="pb-3 text-xl font-bold cursor-pointer text-gray-300 hover:text-gray-500" onClick={() => router.push('/releases')}>检查任务</span>
           </div>
           <div className="flex gap-3 ml-6 pb-1">
-            <Button onClick={showAddDialog}>添加 Checklist</Button>
+            <Button onClick={showAddDialog}>添加检查项</Button>
           </div>
         </div>
 
@@ -166,9 +166,9 @@ export default function ChecklistPoolPage() {
               <span className="text-sm text-gray-600">状态:</span>
               <CustomSelect value={filterStatus} onValueChange={setFilterStatus} placeholder="全部状态" className="w-[130px]">
                 <CustomSelectItem value="all">全部状态</CustomSelectItem>
-                <CustomSelectItem value="pool">池中可用</CustomSelectItem>
-                <CustomSelectItem value="referenced">仅被引用</CustomSelectItem>
-                <CustomSelectItem value="disabled">已禁用</CustomSelectItem>
+                <CustomSelectItem value="pool">可用</CustomSelectItem>
+                <CustomSelectItem value="referenced">已引用</CustomSelectItem>
+                <CustomSelectItem value="disabled">已停用</CustomSelectItem>
               </CustomSelect>
             </div>
             <div className="flex-1" />
@@ -182,7 +182,7 @@ export default function ChecklistPoolPage() {
               <TableRow>
                 <TableHead className="w-[80px]">ID</TableHead>
                 <TableHead>标题</TableHead>
-                <TableHead className="w-[180px]">变更类型</TableHead>
+                <TableHead className="w-[180px]">步骤</TableHead>
                 <TableHead className="w-[100px]">优先级</TableHead>
                 <TableHead className="w-[100px]">状态</TableHead>
                 <TableHead className="w-[120px]">操作</TableHead>
@@ -204,7 +204,7 @@ export default function ChecklistPoolPage() {
                               {typeLabels[c.type] || c.type}
                             </Badge>
                           ))
-                        : <span className="text-xs text-slate-400">无变更</span>
+                        : <span className="text-xs text-slate-400">-</span>
                       }
                     </div>
                   </TableCell>
@@ -215,10 +215,10 @@ export default function ChecklistPoolPage() {
                   </TableCell>
                   <TableCell>
                     {item.isActive && item.referenceCount === 0
-                      ? <Badge variant="success">池中可用</Badge>
+                      ? <Badge variant="success">可用</Badge>
                       : item.referenceCount > 0
-                      ? <Badge variant="warning">被引用</Badge>
-                      : <Badge variant="secondary">已禁用</Badge>
+                      ? <Badge variant="warning">已引用</Badge>
+                      : <Badge variant="secondary">已停用</Badge>
                     }
                   </TableCell>
                   <TableCell>
@@ -237,7 +237,7 @@ export default function ChecklistPoolPage() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-[900px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{isEditing ? '编辑 Checklist' : '添加 Checklist'}</DialogTitle>
+              <DialogTitle>{isEditing ? '编辑检查项' : '添加检查项'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="flex gap-3">
@@ -261,26 +261,26 @@ export default function ChecklistPoolPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-sm mb-1.5 block">整体描述</Label>
+                <Label className="text-sm mb-1.5 block">描述</Label>
                 <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="输入描述信息（可选）" />
               </div>
 
               {/* Changes */}
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <Label className="text-sm">变更项列表</Label>
-                  <Button variant="outline" size="sm" onClick={addChange}>+ 添加变更</Button>
+                  <Label className="text-sm">操作步骤</Label>
+                  <Button variant="outline" size="sm" onClick={addChange}>+ 添加步骤</Button>
                 </div>
                 {form.changes.length === 0 ? (
                   <p className="text-sm text-slate-400 py-4 text-center border border-dashed border-slate-200 rounded-lg">
-                    暂无变更项，点击"+ 添加变更"开始添加
+                    暂无步骤，点击"+ 添加步骤"开始添加
                   </p>
                 ) : (
                   <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
                     {form.changes.map((ch, index) => (
                       <div key={index} className="border border-slate-200 rounded-lg p-4">
                         <div className="flex justify-between items-start mb-3">
-                          <span className="text-sm font-medium text-slate-600">变更 #{index + 1}</span>
+                          <span className="text-sm font-medium text-slate-600">步骤 #{index + 1}</span>
                           <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600 h-auto py-0 px-1" onClick={() => removeChange(index)}>删除</Button>
                         </div>
                         <div className="flex gap-3 mb-3">
@@ -308,8 +308,8 @@ export default function ChecklistPoolPage() {
                             </CustomSelect>
                           </div>
                           <div className="flex-1">
-                            <Label className="text-xs mb-1 block text-slate-500">变更描述</Label>
-                            <Input value={ch.description} onChange={e => updateChange(index, 'description', e.target.value)} placeholder="变更描述（可选）" />
+                            <Label className="text-xs mb-1 block text-slate-500">步骤描述</Label>
+                            <Input value={ch.description} onChange={e => updateChange(index, 'description', e.target.value)} placeholder="步骤描述（可选）" />
                           </div>
                         </div>
                         {ch.codeLanguage && (
