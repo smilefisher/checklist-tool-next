@@ -18,6 +18,14 @@ export enum ReleaseStatus {
   COMPLETED = 'completed'
 }
 
+export interface HighlightSpan {
+  startLine: number
+  startCol: number
+  endLine: number
+  endCol: number
+  color: string
+}
+
 export interface ChecklistChange {
   id: string
   checklistItemId: string
@@ -27,7 +35,7 @@ export interface ChecklistChange {
   codeLanguage?: string
   sortOrder: number
   createdAt: string
-  highlights?: Record<number, string>
+  highlights?: HighlightSpan[]
 }
 
 export interface ChecklistItem {

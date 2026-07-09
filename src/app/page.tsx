@@ -276,7 +276,7 @@ export default function ChecklistPoolPage() {
                     暂无步骤，点击"+ 添加步骤"开始添加
                   </p>
                 ) : (
-                  <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
+                  <div className="space-y-3">
                     {form.changes.map((ch, index) => (
                       <div key={index} className="border border-slate-200 rounded-lg p-4">
                         <div className="flex justify-between items-start mb-3">
@@ -320,7 +320,7 @@ export default function ChecklistPoolPage() {
                               onChange={v => updateChange(index, 'code', v)}
                               language={ch.codeLanguage}
                               placeholder="粘贴配置内容..."
-                              highlights={ch.highlights || {}}
+                              highlights={ch.highlights || []}
                               onHighlightsChange={h => updateChange(index, 'highlights', h)}
                             />
                           </div>

@@ -1,5 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
+import type { HighlightSpan } from '@/types'
+
+function parseHighlights(raw: string | null): HighlightSpan[] {
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) return parsed
+    const spans: HighlightSpan[] = []
+    for (const [line, color] of Object.entries(parsed)) {
+      spans.push({ startLine: Number(line), startCol: 1, endLine: Number(line), endCol: Number.MAX_SAFE_INTEGER, color: color as string })
+    }
+    return spans
+  } catch { return [] }
+}
 
 export async function PUT(
   request: NextRequest,
@@ -54,7 +68,7 @@ export async function PUT(
       codeLanguage: ch.code_language,
       sortOrder: ch.sort_order,
       createdAt: ch.created_at,
-      highlights: ch.highlights ? JSON.parse(ch.highlights) : {},
+      highlights: parseHighlights(ch.highlights),
     }))
   })
 }

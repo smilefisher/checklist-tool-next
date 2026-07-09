@@ -10,25 +10,41 @@ interface CustomSelectProps {
   children: React.ReactNode
 }
 
+interface CustomSelectItemProps {
+  value: string
+  children: React.ReactNode
+  disabled?: boolean
+  className?: string
+  onClick?: () => void
+}
+
+function CustomSelectItem({ children, className, onClick, disabled }: CustomSelectItemProps) {
+  return (
+    <div className={className} onClick={disabled ? undefined : onClick}>
+      {children}
+    </div>
+  )
+}
+
 function CustomSelect({ value, onValueChange, placeholder, className, children }: CustomSelectProps) {
   const [open, setOpen] = React.useState(false)
-  const ref = React.useRef<HTMLDivElement>(null)
+  const containerRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        setOpen(false)
-      }
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current?.contains(e.target as Node)) return
+      setOpen(false)
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
 
   const childArray = React.Children.toArray(children) as React.ReactElement<CustomSelectItemProps>[]
   const selectedChild = childArray.find((child: React.ReactElement<CustomSelectItemProps>) => child.props.value === value)
 
   return (
-    <div ref={ref} className={`relative ${className || ''}`}>
+    <div ref={containerRef} className={`relative ${className || ''}`}>
       <button
         type="button"
         className="flex h-9 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
@@ -42,7 +58,7 @@ function CustomSelect({ value, onValueChange, placeholder, className, children }
         </svg>
       </button>
       {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border border-slate-200 bg-white shadow-lg">
+        <div className="absolute z-[999] mt-1 w-full rounded-md border border-slate-200 bg-white shadow-lg">
           <div className="max-h-60 overflow-auto p-1">
             {childArray.map((child: React.ReactElement<CustomSelectItemProps>) =>
               React.cloneElement(child, {
@@ -63,23 +79,4 @@ function CustomSelect({ value, onValueChange, placeholder, className, children }
   )
 }
 
-interface CustomSelectItemProps {
-  value: string
-  children: React.ReactNode
-  disabled?: boolean
-  className?: string
-  onClick?: () => void
-}
-
-function CustomSelectItem({ children, className, onClick, disabled }: CustomSelectItemProps) {
-  return (
-    <div
-      className={className}
-      onClick={disabled ? undefined : onClick}
-    >
-      {children}
-    </div>
-  )
-}
-
-export { CustomSelect, CustomSelectItem }
+export { CustomSelect, CustomSelectItem, type CustomSelectProps, type CustomSelectItemProps }

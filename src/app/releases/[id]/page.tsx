@@ -19,8 +19,9 @@ import {
 import { CustomSelect, CustomSelectItem } from '@/components/ui/custom-select'
 import CodeEditor from '@/components/CodeEditor'
 import { ReleaseStatus, ChecklistType, Priority } from '@/types'
-import type { ReleaseChecklistItem } from '@/types'
+import type { ReleaseChecklistItem, HighlightSpan } from '@/types'
 import { cn } from '@/lib/utils'
+import hljs from 'highlight.js'
 
 const statusLabels: Record<string, string> = { draft: '未开始', in_progress: '执行中', completed: '已完成' }
 const statusVariants: Record<string, 'secondary' | 'success' | 'warning'> = {
@@ -36,6 +37,33 @@ const priorityLabels: Record<string, string> = { high: '高', medium: '中', low
 const priorityColors: Record<string, string> = { high: 'text-red-600', medium: 'text-amber-600', low: 'text-slate-500' }
 const priorityVariants: Record<string, 'destructive' | 'warning' | 'secondary'> = {
   high: 'destructive', medium: 'warning', low: 'secondary',
+}
+
+const HIGHLIGHT_BG: Record<string, string> = {
+  yellow: 'rgba(251,191,36,0.25)',
+  red: 'rgba(239,68,68,0.25)',
+  green: 'rgba(34,197,94,0.25)',
+  blue: 'rgba(59,130,246,0.25)',
+}
+
+function renderHighlightedCode(code: string, language?: string, highlights?: HighlightSpan[]) {
+  if (!code) return null
+  const hl = Array.isArray(highlights) ? highlights : []
+  let html = ''
+  try {
+    const lang = hljs.getLanguage(language || '') ? language || 'plaintext' : 'plaintext'
+    const allHtml = hljs.highlight(code, { language: lang }).value
+    const lines = allHtml.split('\n')
+    html = lines.map((line, i) => {
+      const lineNum = i + 1
+      const span = hl.find(s => s.startLine <= lineNum && s.endLine >= lineNum)
+      const bg = span ? (HIGHLIGHT_BG[span.color] || '') : ''
+      return `<div style="background:${bg}">${line || '&nbsp;'}</div>`
+    }).join('')
+  } catch {
+    html = code.split('\n').map(l => `<div>${l || '&nbsp;'}</div>`).join('')
+  }
+  return <div className="leading-relaxed whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: html }} />
 }
 
 function formatDate(dateStr: string) {
@@ -173,34 +201,38 @@ export default function ReleaseDetailPage() {
     } catch { toast.error('保存失败') }
   }
 
-  const toggleCheck = async (item: ReleaseChecklistItem) => {
-    try {
-      await fetch(`/api/releases/${releaseId}/items/${item.id}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isChecked: !item.isChecked, note: item.note })
-      })
-      loadRelease()
-    } catch { toast.error('操作失败') }
+  const toggleCheck = (item: ReleaseChecklistItem) => {
+    const newChecked = !item.isChecked
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, isChecked: newChecked } : i))
+    fetch(`/api/releases/${releaseId}/items/${item.id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isChecked: newChecked, note: item.note })
+    }).catch(() => {
+      setItems(prev => prev.map(i => i.id === item.id ? { ...i, isChecked: !newChecked } : i))
+      toast.error('操作失败')
+    })
   }
 
-  const updateNote = async (item: ReleaseChecklistItem) => {
-    try {
-      await fetch(`/api/releases/${releaseId}/items/${item.id}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isChecked: item.isChecked, note: item.note })
-      })
-    } catch { toast.error('保存备注失败') }
+  const updateNote = (item: ReleaseChecklistItem) => {
+    fetch(`/api/releases/${releaseId}/items/${item.id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isChecked: item.isChecked, note: item.note })
+    }).catch(() => toast.error('保存备注失败'))
   }
 
-  const toggleAll = async () => {
+  const toggleAll = () => {
     const allChecked = items.every(item => item.isChecked)
-    await Promise.all(items.map(item =>
+    const newChecked = !allChecked
+    setItems(prev => prev.map(i => ({ ...i, isChecked: newChecked })))
+    Promise.all(items.map(item =>
       fetch(`/api/releases/${releaseId}/items/${item.id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isChecked: !allChecked, note: item.note })
+        body: JSON.stringify({ isChecked: newChecked, note: item.note })
       })
-    ))
-    loadRelease()
+    )).catch(() => {
+      setItems(prev => prev.map(i => ({ ...i, isChecked: !newChecked })))
+      toast.error('操作失败')
+    })
   }
 
   const updateStatus = async (status: string) => {
@@ -294,25 +326,29 @@ export default function ReleaseDetailPage() {
           {items.length === 0 ? (
             <div className="text-center py-12 text-gray-400"><p>暂无检查项</p></div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {items.map((item, index) => (
                 <div
                   key={item.id}
                   className={cn(
-                    "border border-gray-200 rounded-lg p-4",
-                    item.isChecked && "bg-green-50 border-green-200"
+                    "border border-gray-200 rounded-xl p-6 transition-colors",
+                    item.isChecked && "bg-green-50/60 border-green-200"
                   )}
                 >
-                  <div className="flex items-start gap-4">
-                    <Checkbox
-                      checked={item.isChecked}
-                      onCheckedChange={() => toggleCheck(item)}
-                      className="mt-1"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={cn("font-medium text-gray-900 flex-1", item.isChecked && "line-through text-gray-400")}>
-                          {index + 1}. {item.checklistItem?.title}
+                  <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-3 flex-wrap">
+                        <Checkbox
+                          checked={item.isChecked}
+                          onCheckedChange={() => toggleCheck(item)}
+                        />
+                        <span className={cn(
+                          "inline-flex items-center justify-center w-6 h-6 rounded-full text-sm font-semibold shrink-0",
+                          item.isChecked ? "bg-green-500 text-white" : "bg-blue-100 text-blue-700"
+                        )}>
+                          {index + 1}
+                        </span>
+                        <span className={cn("font-semibold text-gray-900 text-base", item.isChecked && "line-through text-gray-400")}>
+                          {item.checklistItem?.title}
                         </span>
                         {(item.checklistItem?.changes || []).length > 0 && item.checklistItem!.changes!.map((c: any) => (
                           <Badge key={c.id || c.sortOrder} variant={typeVariants[c.type] || 'secondary'}>
@@ -325,27 +361,32 @@ export default function ReleaseDetailPage() {
                         <Button variant="outline" size="sm" onClick={() => editChecklistItem(item)}>编辑</Button>
                       </div>
                       {item.checklistItem?.description && (
-                        <p className="text-gray-500 text-sm mb-3">{item.checklistItem?.description}</p>
+                        <p className="text-gray-500 text-sm mb-4">{item.checklistItem?.description}</p>
                       )}
 
-                      {(item.checklistItem?.changes || []).map((c: any, ci: number) => (
-                        <div key={c.id || ci}>
-                          {c.description && (
-                            <p className="text-gray-400 text-xs mb-1 mt-2">{c.description}</p>
-                          )}
-                          {c.code && (
-                            <div className="mb-3 rounded overflow-hidden border border-gray-200">
-                              <div className="flex items-center justify-between bg-gray-800 px-3 py-1.5">
-                                <span className="text-xs text-gray-400 font-mono uppercase">{c.codeLanguage || typeLabels[c.type] || c.type}</span>
-                                <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white h-6 px-2 text-xs" onClick={() => copyCode(c.code)}>复制</Button>
+                      {(item.checklistItem?.changes || []).length > 0 && (
+                        <div className="space-y-4 mb-4">
+                          {(item.checklistItem?.changes || []).map((c: any, ci: number) => (
+                            <div key={c.id || ci} className="border border-slate-200 rounded-lg overflow-hidden">
+                              <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-blue-500 text-white text-[11px] font-bold shrink-0">
+                                  {ci + 1}
+                                </span>
+                                <span className="text-sm font-medium text-slate-600">{c.description || typeLabels[c.type] || c.type}</span>
+                                <span className="flex-1" />
+                                {c.code && (
+                                  <Button variant="ghost" size="sm" className="text-blue-500 hover:text-blue-700 h-7 px-2 text-xs" onClick={() => copyCode(c.code)}>复制</Button>
+                                )}
                               </div>
-                              <div className="bg-gray-900 p-3">
-                                <pre className="text-sm text-gray-100 font-mono whitespace-pre-wrap break-all">{c.code}</pre>
-                              </div>
+                              {c.code && (
+                                <div className="bg-[#0f172a] p-4 font-mono text-[13px] leading-relaxed">
+                                  {renderHighlightedCode(c.code, c.codeLanguage, c.highlights)}
+                                </div>
+                              )}
                             </div>
-                          )}
+                          ))}
                         </div>
-                      ))}
+                      )}
 
                       <Textarea
                         value={item.note}
@@ -359,10 +400,9 @@ export default function ReleaseDetailPage() {
                       />
 
                       {item.checkedAt && (
-                        <div className="text-xs text-green-600 mt-2">已完成于 {formatDate(item.checkedAt)}</div>
+                        <div className="text-xs text-green-600 mt-3">已完成于 {formatDate(item.checkedAt)}</div>
                       )}
                     </div>
-                  </div>
                 </div>
               ))}
             </div>
@@ -371,38 +411,52 @@ export default function ReleaseDetailPage() {
 
         {/* Edit item dialog */}
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent className="max-w-[550px] max-h-[85vh] overflow-y-auto">
+          <DialogContent className="max-w-[700px] max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>编辑检查项</DialogTitle></DialogHeader>
-            <div className="p-4">
-              <div className="mb-3">
-                <Label className="text-sm mb-1.5 block">标题</Label>
-                <Input value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} />
+            <div className="space-y-4">
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <Label className="text-sm mb-1.5 block">标题</Label>
+                  <Input value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} />
+                </div>
+                <div style={{ width: 100 }}>
+                  <Label className="text-sm mb-1.5 block">优先级</Label>
+                  <CustomSelect value={editForm.priority} onValueChange={v => setEditForm({ ...editForm, priority: v as Priority })}>
+                    <CustomSelectItem value="high">高</CustomSelectItem>
+                    <CustomSelectItem value="medium">中</CustomSelectItem>
+                    <CustomSelectItem value="low">低</CustomSelectItem>
+                  </CustomSelect>
+                </div>
               </div>
-              <div className="mb-3">
+              <div>
                 <Label className="text-sm mb-1.5 block">描述</Label>
                 <Textarea value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} rows={2} />
               </div>
 
               <div>
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex justify-between items-center mb-3">
                   <Label className="text-sm">操作步骤</Label>
                   <Button variant="outline" size="sm" onClick={() => setEditForm({ ...editForm, changes: [...editForm.changes, { id: '', checklistItemId: '', type: 'config', description: '', code: '', codeLanguage: '', sortOrder: editForm.changes.length, createdAt: '' }] })}>+ 添加步骤</Button>
                 </div>
                 {editForm.changes.length === 0 ? (
-                  <p className="text-sm text-slate-400 py-3 text-center border border-dashed border-slate-200 rounded-lg">暂无步骤</p>
+                  <p className="text-sm text-slate-400 py-4 text-center border border-dashed border-slate-200 rounded-lg">暂无步骤</p>
                 ) : (
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  <div className="space-y-3">
                     {editForm.changes.map((c, ci) => (
-                      <div key={ci} className="border border-slate-200 rounded-lg p-3">
-                        <div className="flex gap-2 mb-2">
-                          <CustomSelect value={c.type} onValueChange={v => { const nc = [...editForm.changes]; nc[ci] = { ...nc[ci], type: v }; setEditForm({ ...editForm, changes: nc }) }} className="w-[110px]">
+                      <div key={ci} className="border border-slate-200 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-slate-400">步骤 {ci + 1}</span>
+                          <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600 h-auto py-0.5 px-1" onClick={() => setEditForm({ ...editForm, changes: editForm.changes.filter((_, i) => i !== ci) })}>删除</Button>
+                        </div>
+                        <div className="flex gap-3">
+                          <CustomSelect value={c.type} onValueChange={v => { const nc = [...editForm.changes]; nc[ci] = { ...nc[ci], type: v }; setEditForm({ ...editForm, changes: nc }) }} className="w-[130px]">
                             <CustomSelectItem value="config">配置修改</CustomSelectItem>
                             <CustomSelectItem value="sql">SQL 变更</CustomSelectItem>
                             <CustomSelectItem value="deploy">代码部署</CustomSelectItem>
                             <CustomSelectItem value="restart">服务重启</CustomSelectItem>
                             <CustomSelectItem value="other">其他</CustomSelectItem>
                           </CustomSelect>
-                          <CustomSelect value={c.codeLanguage || ''} onValueChange={v => { const nc = [...editForm.changes]; nc[ci] = { ...nc[ci], codeLanguage: v }; setEditForm({ ...editForm, changes: nc }) }} placeholder="配置类型" className="w-[120px]">
+                          <CustomSelect value={c.codeLanguage || ''} onValueChange={v => { const nc = [...editForm.changes]; nc[ci] = { ...nc[ci], codeLanguage: v }; setEditForm({ ...editForm, changes: nc }) }} placeholder="配置类型" className="w-[140px]">
                             <CustomSelectItem value="">无代码</CustomSelectItem>
                             <CustomSelectItem value="sql">SQL</CustomSelectItem>
                             <CustomSelectItem value="yaml">YAML</CustomSelectItem>
@@ -412,8 +466,10 @@ export default function ReleaseDetailPage() {
                             <CustomSelectItem value="javascript">JavaScript</CustomSelectItem>
                             <CustomSelectItem value="text">其他</CustomSelectItem>
                           </CustomSelect>
-                          <Input value={c.description} onChange={e => { const nc = [...editForm.changes]; nc[ci] = { ...nc[ci], description: e.target.value }; setEditForm({ ...editForm, changes: nc }) }} placeholder="步骤描述（可选）" className="flex-1" />
-                          <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600 h-9 px-1" onClick={() => setEditForm({ ...editForm, changes: editForm.changes.filter((_, i) => i !== ci) })}>删除</Button>
+                          <div className="flex-1" />
+                        </div>
+                        <div>
+                          <Input value={c.description} onChange={e => { const nc = [...editForm.changes]; nc[ci] = { ...nc[ci], description: e.target.value }; setEditForm({ ...editForm, changes: nc }) }} placeholder="步骤描述（可选）" />
                         </div>
                         {c.codeLanguage && (
                           <CodeEditor
@@ -421,7 +477,7 @@ export default function ReleaseDetailPage() {
                             onChange={v => { const nc = [...editForm.changes]; nc[ci] = { ...nc[ci], code: v }; setEditForm({ ...editForm, changes: nc }) }}
                             language={c.codeLanguage}
                             placeholder="粘贴配置内容..."
-                            highlights={c.highlights || {}}
+                            highlights={c.highlights || []}
                             onHighlightsChange={h => { const nc = [...editForm.changes]; nc[ci] = { ...nc[ci], highlights: h }; setEditForm({ ...editForm, changes: nc }) }}
                           />
                         )}

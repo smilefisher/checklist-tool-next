@@ -1,243 +1,161 @@
 "use client"
 
-import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react'
-import hljs from 'highlight.js'
+import React, { useRef, useCallback, useEffect } from 'react'
+import Editor, { type OnMount } from '@monaco-editor/react'
+import type { editor } from 'monaco-editor'
+import type { HighlightSpan } from '@/types'
 
 interface CodeEditorProps {
   value: string
   onChange: (value: string) => void
   language?: string
   placeholder?: string
-  highlights?: Record<number, string>
-  onHighlightsChange?: (highlights: Record<number, string>) => void
+  highlights?: HighlightSpan[]
+  onHighlightsChange?: (highlights: HighlightSpan[]) => void
 }
 
-const langMap: Record<string, string> = {
-  shell: 'bash',
-  text: 'plaintext',
+const langMap: Record<string, string> = { shell: 'shell', text: 'plaintext' }
+
+const HIGHLIGHT_BG: Record<string, string> = {
+  yellow: 'rgba(251,191,36,0.25)',
+  red: 'rgba(239,68,68,0.25)',
+  green: 'rgba(34,197,94,0.25)',
+  blue: 'rgba(59,130,246,0.25)',
 }
 
-const HIGHLIGHT_COLORS = [
-  { key: 'none', bg: 'transparent', label: '清除' },
-  { key: 'yellow', bg: 'rgba(251, 191, 36, 0.2)', label: '黄' },
-  { key: 'red', bg: 'rgba(239, 68, 68, 0.2)', label: '红' },
-  { key: 'green', bg: 'rgba(34, 197, 94, 0.2)', label: '绿' },
-  { key: 'blue', bg: 'rgba(59, 130, 246, 0.2)', label: '蓝' },
-]
+const COLORS = ['yellow', 'red', 'green', 'blue'] as const
+const LABELS: Record<string, string> = { yellow: '黄色', red: '红色', green: '绿色', blue: '蓝色' }
 
 export default function CodeEditor({
-  value, onChange, language, placeholder,
-  highlights = {}, onHighlightsChange,
+  value, onChange, language, highlights = [], onHighlightsChange,
 }: CodeEditorProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const preRef = useRef<HTMLPreElement>(null)
-  const gutterRef = useRef<HTMLDivElement>(null)
-  const [highlighted, setHighlighted] = useState('')
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
+  const decorationsRef = useRef<string[]>([])
+  const monacoLang = langMap[language || ''] || language || 'plaintext'
 
-  const highlight = useCallback((code: string) => {
-    if (!code) return ''
-    const lang = langMap[language || ''] || language || 'plaintext'
-    try {
-      const validLang = hljs.getLanguage(lang) ? lang : 'plaintext'
-      return hljs.highlight(code, { language: validLang }).value
-    } catch {
-      return code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    }
-  }, [language])
+  const updateHighlights = useCallback((spans: HighlightSpan[]) => {
+    const instance = editorRef.current
+    if (!instance) return
+    if (!Array.isArray(spans)) return
 
-  useEffect(() => {
-    setHighlighted(highlight(value))
-  }, [value, highlight])
+    const decs: editor.IModelDeltaDecoration[] = []
+    const classSet = new Set<string>()
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = Math.max(160, textareaRef.current.scrollHeight) + 'px'
-    }
-  }, [value])
+    for (const s of spans) {
+      const bg = HIGHLIGHT_BG[s.color]
+      if (!bg) continue
+      const cls = `hl-${s.startLine}-${s.startCol}-${s.endLine}-${s.endCol}`
+      classSet.add(`${cls}{background:${bg};border-radius:2px}`)
 
-  const lineCount = useMemo(() => (value || '').split('\n').length, [value])
-
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(e.target.value)
-  }
-
-  const handleScroll = () => {
-    if (textareaRef.current) {
-      if (preRef.current) {
-        preRef.current.scrollTop = textareaRef.current.scrollTop
-        preRef.current.scrollLeft = textareaRef.current.scrollLeft
-      }
-      if (gutterRef.current) {
-        gutterRef.current.scrollTop = textareaRef.current.scrollTop
-      }
-    }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Tab') {
-      e.preventDefault()
-      const textarea = e.currentTarget
-      const start = textarea.selectionStart
-      const end = textarea.selectionEnd
-      const newValue = value.substring(0, start) + '  ' + value.substring(end)
-      onChange(newValue)
-      requestAnimationFrame(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + 2
+      decs.push({
+        range: {
+          startLineNumber: s.startLine, startColumn: s.startCol,
+          endLineNumber: s.endLine, endColumn: s.endCol,
+        },
+        options: { inlineClassName: cls },
       })
     }
-  }
 
-  const toggleHighlight = (lineNumber: number) => {
-    const current = highlights[lineNumber]
-    const keys = HIGHLIGHT_COLORS.map(c => c.key)
-    const currentIdx = keys.indexOf(current || 'none')
-    const nextIdx = (currentIdx + 1) % keys.length
-    const nextKey = keys[nextIdx]
-
-    const newHighlights = { ...highlights }
-    if (nextKey === 'none') {
-      delete newHighlights[lineNumber]
-    } else {
-      newHighlights[lineNumber] = nextKey
+    let styleEl = document.getElementById('monaco-hl-style')
+    if (!styleEl) {
+      styleEl = document.createElement('style')
+      styleEl.id = 'monaco-hl-style'
+      document.head.appendChild(styleEl)
     }
-    onHighlightsChange?.(newHighlights)
-  }
+    styleEl.textContent = Array.from(classSet).join('\n')
+
+    decorationsRef.current = instance.deltaDecorations(decorationsRef.current, decs)
+  }, [])
+
+  const handleMount: OnMount = useCallback((instance, monaco) => {
+    editorRef.current = instance
+
+    // Add right-click actions for each color
+    COLORS.forEach((color, i) => {
+      instance.addAction({
+        id: `mark-${color}`,
+        label: `标记${LABELS[color]}`,
+        contextMenuGroupId: 'highlight',
+        contextMenuOrder: i + 1,
+        run: () => {
+          if (!onHighlightsChange) return
+          const sel = instance.getSelection()
+          if (!sel || sel.isEmpty()) return
+          const span: HighlightSpan = {
+            startLine: sel.startLineNumber, startCol: sel.startColumn,
+            endLine: sel.endLineNumber, endCol: sel.endColumn,
+            color,
+          }
+          onHighlightsChange([...highlights, span])
+        },
+      })
+    })
+
+    instance.addAction({
+      id: 'clear-marks',
+      label: '清除所有标记',
+      contextMenuGroupId: 'highlight',
+      contextMenuOrder: 9,
+      run: () => onHighlightsChange?.([]),
+    })
+
+    updateHighlights(highlights)
+  }, [])
+
+  useEffect(() => { updateHighlights(highlights) }, [highlights, updateHighlights])
 
   return (
-    <div className="w-full rounded-lg overflow-hidden border border-[#334155] font-mono">
-      <div className="flex items-center gap-2 px-3.5 py-2 bg-[#0f172a] border-b border-[#1e293b]">
+    <div className="w-full rounded-lg overflow-hidden border border-slate-700">
+      <div className="flex items-center gap-2 px-3.5 py-2 bg-slate-900 border-b border-slate-700">
         <div className="flex gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-red-400"></span>
-          <span className="w-3 h-3 rounded-full bg-amber-400"></span>
-          <span className="w-3 h-3 rounded-full bg-emerald-400"></span>
+          <span className="w-3 h-3 rounded-full bg-red-400" />
+          <span className="w-3 h-3 rounded-full bg-amber-400" />
+          <span className="w-3 h-3 rounded-full bg-emerald-400" />
         </div>
-        <span className="text-xs font-medium text-slate-400 ml-2 uppercase tracking-wide">
-          {language || 'text'}
-        </span>
-        <div className="flex-1" />
-        <span className="text-[10px] text-slate-500">点击行号切换标记颜色</span>
+        <span className="text-xs font-medium text-slate-400 ml-2 uppercase tracking-wide">{monacoLang}</span>
       </div>
-      <div className="flex bg-[#0f172a] overflow-hidden">
-        <div
-          ref={gutterRef}
-          className="overflow-hidden flex-shrink-0 border-r border-[#1e293b] select-none"
-        >
-          <div style={{ paddingTop: 14 }}>
-          {Array.from({ length: Math.max(lineCount, 1) }, (_, i) => {
-            const lineNum = i + 1
-            const colorKey = highlights[lineNum]
-            const colorDef = HIGHLIGHT_COLORS.find(c => c.key === colorKey)
-            return (
-              <div
-                key={i}
-                onClick={() => toggleHighlight(lineNum)}
-                className="flex items-center justify-end cursor-pointer transition-colors"
-                style={{
-                  height: '20.8px',
-                  paddingRight: 8,
-                  minWidth: 48,
-                  lineHeight: '20.8px',
-                  backgroundColor: colorDef?.bg || 'transparent',
-                }}
-              >
-                <span className={colorKey ? 'text-xs text-slate-200' : 'text-[10px] text-slate-600'}>
-                  {lineNum}
-                </span>
-              </div>
-            )
-          })}
-          </div>
-        </div>
-        <div className="flex-1 relative overflow-hidden">
-          <pre
-            ref={preRef}
-            className="absolute top-0 left-0 w-full h-full m-0 p-3.5 bg-transparent text-[13px] leading-[1.6] whitespace-pre-wrap break-all overflow-auto pointer-events-none text-[#e2e8f0]"
-            aria-hidden="true"
-          >
-            <code
-              dangerouslySetInnerHTML={{ __html: highlighted }}
-              className="bg-transparent"
-            />
-          </pre>
-          <textarea
-            ref={textareaRef}
-            value={value}
-            onChange={handleInput}
-            onScroll={handleScroll}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder || '粘贴配置内容...'}
-            spellCheck={false}
-            autoComplete="off"
-            className="relative block w-full min-h-[160px] p-3.5 bg-transparent border-none outline-none resize-none text-[13px] leading-[1.6] text-transparent caret-[#e2e8f0] whitespace-pre-wrap break-all overflow-hidden placeholder:text-[#475569]"
-            style={{ tabSize: 2 }}
-          />
-        </div>
-      </div>
-      {Object.keys(highlights).length > 0 && (
-        <div className="flex items-center gap-3 px-3 py-1.5 bg-[#0a0f1a] border-t border-[#1e293b]">
+      <Editor
+        height="200px"
+        language={monacoLang}
+        value={value}
+        onChange={v => onChange(v || '')}
+        onMount={handleMount}
+        loading={<div className="bg-[#1e1e1e] h-[200px] flex items-center justify-center text-slate-500 text-sm">加载编辑器...</div>}
+        options={{
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          fontSize: 13,
+          lineHeight: 20,
+          fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace",
+          tabSize: 2,
+          insertSpaces: true,
+          autoIndent: 'full',
+          wordWrap: 'on',
+          automaticLayout: true,
+          lineNumbersMinChars: 3,
+          glyphMargin: false,
+          folding: true,
+          renderLineHighlight: 'none',
+          padding: { top: 8 },
+          scrollbar: { verticalScrollbarSize: 6, horizontalScrollbarSize: 6 },
+        }}
+        theme="vs-dark"
+      />
+      {highlights.length > 0 && (
+        <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-900 border-t border-slate-700">
           <span className="text-[10px] text-slate-500">标记：</span>
-          {HIGHLIGHT_COLORS.filter(c => c.key !== 'none').map(c => (
-            <button
-              key={c.key}
-              onClick={() => {
-                const newH = { ...highlights }
-                Object.keys(newH).forEach(k => { delete newH[Number(k)] })
-                onHighlightsChange?.(newH)
-              }}
-              className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white"
-            >
-              <span className="w-3 h-3 rounded" style={{ backgroundColor: c.bg, border: '1px solid rgba(255,255,255,0.15)' }} />
-              {Object.values(highlights).filter(v => v === c.key).length}
-            </button>
-          ))}
-          {Object.keys(highlights).length > 0 && (
-            <button
-              onClick={() => onHighlightsChange?.({})}
-              className="text-[10px] text-slate-500 hover:text-slate-300 ml-auto"
-            >清除全部</button>
-          )}
+          {COLORS.map(c => {
+            const count = highlights.filter(h => h.color === c).length
+            return count > 0 ? (
+              <span key={c} className="flex items-center gap-1 text-[10px] text-slate-400">
+                <span className="w-3 h-3 rounded" style={{ backgroundColor: HIGHLIGHT_BG[c], border: '1px solid rgba(255,255,255,0.2)' }} />
+                {count}
+              </span>
+            ) : null
+          })}
+          <button onClick={() => onHighlightsChange?.([])} className="text-[10px] text-slate-500 hover:text-slate-300 ml-auto">清除全部</button>
         </div>
       )}
-      <style>{`
-        .hljs { color: #abb2bf; }
-        .hljs-keyword { color: #c678dd; }
-        .hljs-string { color: #98c379; }
-        .hljs-comment { color: #5c6370; font-style: italic; }
-        .hljs-number { color: #d19a66; }
-        .hljs-built_in { color: #61afef; }
-        .hljs-function { color: #61afef; }
-        .hljs-title { color: #61afef; }
-        .hljs-title.class_ { color: #e5c07b; }
-        .hljs-title.function_ { color: #61afef; }
-        .hljs-attr { color: #d19a66; }
-        .hljs-attribute { color: #e06c75; }
-        .hljs-variable { color: #e06c75; }
-        .hljs-variable.language_ { color: #e06c75; }
-        .hljs-variable.constant_ { color: #d19a66; }
-        .hljs-operator { color: #56b6c2; }
-        .hljs-punctuation { color: #abb2bf; }
-        .hljs-tag { color: #e06c75; }
-        .hljs-name { color: #e06c75; }
-        .hljs-selector-class { color: #e5c07b; }
-        .hljs-selector-tag { color: #e06c75; }
-        .hljs-literal { color: #d19a66; }
-        .hljs-type { color: #e5c07b; }
-        .hljs-symbol { color: #56b6c2; }
-        .hljs-meta { color: #61afef; }
-        .hljs-meta.string { color: #98c379; }
-        .hljs-subst { color: #abb2bf; }
-        .hljs-section { color: #e06c75; font-weight: bold; }
-        .hljs-bullet { color: #e5c07b; }
-        .hljs-link { color: #61afef; text-decoration: underline; }
-        .hljs-emphasis { font-style: italic; }
-        .hljs-strong { font-weight: bold; }
-        .hljs-addition { color: #98c379; background: rgba(152,195,121,0.1); }
-        .hljs-deletion { color: #e06c75; background: rgba(224,108,117,0.1); }
-        .hljs-params { color: #abb2bf; }
-        .hljs-property { color: #e06c75; }
-        .hljs-regexp { color: #56b6c2; }
-      `}</style>
     </div>
   )
 }

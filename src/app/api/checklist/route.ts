@@ -1,5 +1,20 @@
+function parseHighlights(raw: string | null): HighlightSpan[] {
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) return parsed
+    // Old format: {"1": "red", "2": "green"} → convert to array
+    const spans: HighlightSpan[] = []
+    for (const [line, color] of Object.entries(parsed)) {
+      spans.push({ startLine: Number(line), startCol: 1, endLine: Number(line), endCol: Number.MAX_SAFE_INTEGER, color: color as string })
+    }
+    return spans
+  } catch { return [] }
+}
+
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
+import type { HighlightSpan } from '@/types'
 
 export async function GET() {
   const [items] = await pool.query(`
@@ -28,7 +43,7 @@ export async function GET() {
       codeLanguage: ch.code_language,
       sortOrder: ch.sort_order,
       createdAt: ch.created_at,
-      highlights: ch.highlights ? JSON.parse(ch.highlights) : {},
+      highlights: parseHighlights(ch.highlights),
     })
     changesByItem.set(ch.checklist_item_id, list)
   }
