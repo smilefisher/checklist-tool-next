@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 本地构建产物
+*.tar.gz
+
+# 环境变量示例需要入库
+!.env.example

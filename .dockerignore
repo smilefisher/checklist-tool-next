@@ -6,3 +6,4 @@ Dockerfile
 build.sh
 deploy.sh
 *.tar.gz
+.env*
