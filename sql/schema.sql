@@ -4,6 +4,9 @@
 --   mysql -h 127.0.0.1 -P 3307 -u root -p checklist < sql/schema.sql
 -- Docker Compose 启动时会自动执行本文件（见 docker-compose.yml）。
 
+-- 强制按 utf8mb4 解析本文件，避免客户端默认字符集不是 utf8mb4 时中文变成乱码
+SET NAMES utf8mb4;
+
 -- Checklist 池表
 CREATE TABLE IF NOT EXISTS checklist_items (
   id INT AUTO_INCREMENT PRIMARY KEY COMMENT '主键 ID',

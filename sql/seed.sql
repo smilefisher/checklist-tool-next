@@ -2,6 +2,9 @@
 -- Docker Compose 首次初始化时会自动执行；不需要示例数据可删除 docker-compose.yml 里对应挂载。
 -- 注意：依赖 sql/schema.sql 先执行。
 
+-- 强制按 utf8mb4 解析本文件，避免中文乱码
+SET NAMES utf8mb4;
+
 INSERT INTO checklist_items (id, title, priority, description, is_active, is_deleted) VALUES
 (1, '数据库配置变更', 'high', '修改应用配置文件中的数据库连接信息', TRUE, FALSE),
 (2, '创建用户表', 'medium', '在发布环境创建用户表结构', TRUE, FALSE),
